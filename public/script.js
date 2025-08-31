@@ -6,7 +6,10 @@
 // ---------- Config ----------
 const APP_TITLE = "CIDFAE Inventario";
 
-const API_BASE = (typeof window !== "undefined" && window.__API_BASE__) || "/api";
+const API_BASE =
+    (typeof document !== "undefined" &&
+        document.querySelector('meta[name="api-base"]')?.content) ||
+    "/api";
 const TOKEN_KEY = "cidfae_token";
 
 // ---------- Estado ----------
@@ -135,8 +138,12 @@ function iconBadge(type){
 
 function linkHtml(link){
     if (!link) return "";
-    const { label, onClick } = link; // onClick es el nombre de función global
-    return `<a href="javascript:void(0)" onclick="${onClick}" class="btn btn-link">${label || "Abrir"}</a>`;
+    // link: { label, action, id }
+    const { label, action, id } = link;
+    return `<button type="button" class="btn btn-link"
+                  data-action="${action}" data-id="${id ?? ""}">
+            ${label || "Abrir"}
+          </button>`;
 }
 
 /**
@@ -247,15 +254,22 @@ function renderActivityTable(){
     tbody.innerHTML = slice.map(a=>{
         const meta = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
         const dt = new Date(a.ts);
-        const link = a.link ? `<a href="javascript:void(0)" onclick="${a.link.onClick}">${a.link.label||"Abrir"}</a>` : "";
+        const link = a.link
+            ? `<button type="button" class="btn btn-link"
+             data-action="${a.link.action || ""}"
+             data-id="${a.link.id ?? ""}">
+       ${a.link.label || "Abrir"}
+     </button>`
+            : "";
+
         return `<tr>
-      <td title="${dt.toLocaleString()}">${timeAgo(a.ts)}</td>
-      <td>${a.title || meta.label}</td>
-      <td>${a.user}</td>
-      <td><span class="badge" style="background:${meta.color}; color:#fff; padding:2px 8px; border-radius:999px;">${meta.label}</span></td>
-      <td>${a.message || ""}</td>
-      <td>${link}</td>
-    </tr>`;
+  <td title="${dt.toLocaleString()}">${timeAgo(a.ts)}</td>
+  <td>${a.title || meta.label}</td>
+  <td>${a.user}</td>
+  <td><span class="badge" style="background:${meta.color}; color:#fff; padding:2px 8px; border-radius:999px;">${meta.label}</span></td>
+  <td>${a.message || ""}</td>
+  <td>${link}</td>
+</tr>`;
     }).join("");
 
     if (pageInfo) pageInfo.textContent = `Página ${activityPage} de ${totalPages}`;
@@ -681,7 +695,7 @@ async function handleSpecimenSubmit(e) {
         message: `Se actualizó la probeta #${body.orden ?? ""}`,
         user: currentUser,
         entity: { kind:"probeta", id },
-        link: { label:"Ver lote", onClick: `editSpecimen('${id}')` }
+        link: { label: "Ver probeta", action: "edit-specimen", id }
     });
 
 }
@@ -761,9 +775,12 @@ async function handleBatchSubmit(e) {
         message: `Lote "${batchData.name}" ${currentBatch?.id ? "actualizado" : `creado con ${batchData.specimens.length} probetas`}`,
         user: currentUser,
         entity: { kind:"lote", id: currentBatch?.id || "(nuevo)", name: batchData.name },
-        link: { label:"Ver lote", onClick: currentBatch?.id ? `viewBatch('${currentBatch.id}')` : "" }
+        link: currentBatch?.id
+            ? { label: "Ver lote", action: "view-batch", id: currentBatch.id }
+            : null
     });
 }
+
 
 // ---------- Tablas ----------
 function loadSpecimensTable(filtered = null) {
@@ -796,27 +813,21 @@ function loadSpecimensTable(filtered = null) {
       <td>${s.tipo_resina ?? ""}</td>
       <td title="${s.curado_temp_hum ?? ""}">${truncateText(s.curado_temp_hum ?? "", 20)}</td>
       <td>
-        <div class="action-buttons">
-          <button class="action-btn edit" title="Editar" onclick="openSpecimenModal(${JSON.stringify({
-            id: s.id,
-            orden: s.orden,
-            fecha: s.fecha,
-            orientacion: s.orientacion,
-            descripcion: s.descripcion,
-            ensayo: s.ensayo,
-            tipo_fibra: s.tipo_fibra,
-            tipo_resina: s.tipo_resina,
-            fuerza_maxima: s.fuerza_maxima,
-            modulo_elasticidad: s.modulo_elasticidad,
-            curado_temp_hum: s.curado_temp_hum,
-        }).replace(/"/g, '&quot;')})">
-            <i class="fas fa-pen"></i>
-          </button>
-          <button class="action-btn delete" title="Eliminar" onclick="deleteSpecimen('${s.id}')">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </td>`;
+  <div class="action-buttons">
+    <button class="action-btn edit" title="Editar"
+            type="button"
+            data-action="edit-specimen"
+            data-id="${s.id}">
+      <i class="fas fa-pen"></i>
+    </button>
+    <button class="action-btn delete" title="Eliminar"
+            type="button"
+            data-action="delete-specimen"
+            data-id="${s.id}">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>`;
         specimensTableBody.appendChild(row);
     });
 }
@@ -882,20 +893,24 @@ function loadBatchesGrid() {
     <div class="batch-stat"><div class="number">${formatDate(b.date)}</div><div class="label">Fecha</div></div>
   </div>
   <div class="batch-actions">
-    <button class="btn btn-primary" onclick="viewBatch('${b.id}')">
-      <i class="fas fa-eye"></i> Visualizar
-    </button>
-    <button class="btn btn-warning" onclick="editBatch('${b.id}')">
-      <i class="fas fa-pen"></i> Editar
-    </button>
-    <button class="btn btn-danger" onclick="deleteBatch('${b.id}')">
-      <i class="fas fa-trash"></i> Eliminar
-    </button>
-  </div>
+  <button class="btn btn-primary" type="button"
+          data-action="view-batch" data-id="${b.id}">
+    <i class="fas fa-eye"></i> Visualizar
+  </button>
+  <button class="btn btn-warning" type="button"
+          data-action="edit-batch" data-id="${b.id}">
+    <i class="fas fa-pen"></i> Editar
+  </button>
+  <button class="btn btn-danger" type="button"
+          data-action="delete-batch" data-id="${b.id}">
+    <i class="fas fa-trash"></i> Eliminar
+  </button>
+</div>
 `;
         batchesGrid.appendChild(card);
     });
 }
+
 
 // ---------- Acciones ----------
 function editSpecimen(specimenId) {
@@ -1083,11 +1098,50 @@ function truncateText(t, n) {
     return t.length <= n ? t : t.substring(0, n) + "...";
 }
 
-// Exponer funciones globales para HTML
-window.removeSpecimenRow = removeSpecimenRow;
-window.editSpecimen = editSpecimen;
-window.deleteSpecimen = deleteSpecimen;
-window.deleteBatch = deleteBatch;
-window.viewBatch = viewBatch;
-window.editBatch = editBatch;
-window.openSpecimenModal = openSpecimenModal;
+
+specimensTableBody?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === "edit-specimen") {
+        const sp = specimens.find((x) => String(x.id) === String(id));
+        if (sp) openSpecimenModal(sp);
+    }
+    if (action === "delete-specimen") {
+        deleteSpecimen(id);
+    }
+})
+
+batchesGrid?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === "view-batch") return viewBatch(id);
+    if (action === "edit-batch") return editBatch(id);
+    if (action === "delete-batch") return deleteBatch(id);
+});
+
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    switch (action) {
+        case "view-batch": return viewBatch(id);
+        case "edit-batch": return editBatch(id);
+        case "delete-batch": return deleteBatch(id);
+        case "edit-specimen": {
+            const sp = specimens.find((x) => String(x.id) === String(id));
+            if (sp) openSpecimenModal(sp);
+            return;
+        }
+        case "delete-specimen": return deleteSpecimen(id);
+        default: return;
+    }
+});
