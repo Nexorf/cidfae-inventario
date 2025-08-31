@@ -22,12 +22,9 @@ app.use(morgan("combined"));
 app.use(
     cors({
         origin: [
-            process.env.CORS_ORIGIN || "http://localhost:5500",
-            "http://localhost:63343",
-            "http://localhost:63342",
-            "http://127.0.0.1:5500"
+            "*"
         ],
-        credentials: true, // no usamos cookies, pero no molesta
+        credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         optionsSuccessStatus: 204
