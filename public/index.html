@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sistema de Inventario CIDFAE - Probetas de Materiales</title>
+    <link rel="stylesheet" href="styles.css"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body>
+<!-- Login Screen -->
+<div id="loginScreen" class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <img src="/images/logo.png" alt="CIDFAE Logo" class="logo"/>
+            <h1>Sistema de Inventario</h1>
+            <h2>Fuerza Aérea Ecuatoriana</h2>
+            <p>Gestión de Probetas de Materiales</p>
+        </div>
+        <form id="loginForm" class="login-form">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required/>
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required/>
+                <i class="fas fa-lock"></i>
+            </div>
+            <button type="submit" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                Iniciar Sesión
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Main Application -->
+<div id="mainApp" class="app-container" style="display:none;">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <!-- FIX: usar /images y agregar ids para el script -->
+            <img id="brandLogo" src="/images/logo.png" alt="CIDFAE Logo" class="sidebar-logo"/>
+            <h3 id="brandTitle">CIDFAE Inventario</h3>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item active" data-view="dashboard">
+                <i class="fas fa-tachometer-alt"></i><span>Inicio</span>
+            </li>
+            <li class="menu-item" data-view="specimens">
+                <i class="fas fa-vial"></i><span>Probetas</span>
+            </li>
+            <li class="menu-item" data-view="batches">
+                <i class="fas fa-layer-group"></i><span>Lotes</span>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <button id="logoutBtn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i><span>Cerrar Sesión</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-left">
+                <h1 id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="currentUser">Usuario</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view active">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-vial"></i></div>
+                    <div class="stat-info"><h3 id="totalSpecimens">0</h3>
+                        <p>Total Probetas</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="stat-info"><h3 id="totalBatches">0</h3>
+                        <p>Lotes Activos</p></div>
+                </div>
+            </div>
+            <div class="dashboard-content">
+                <div class="recent-activity">
+                    <h3>Actividad Reciente</h3>
+                    <div class="activity-toolbar">
+                        <button class="btn btn-secondary" id="openActivityModal">
+                            <i class="fas fa-list"></i> Ver todo
+                        </button>
+                        <button class="btn btn-secondary" id="clearActivityBtn" title="Limpiar actividad local">
+                            <i class="fas fa-broom"></i>
+                        </button>
+                    </div>
+                    <div class="activity-list" id="activityList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Specimens View -->
+        <!-- Specimens View -->
+        <div id="specimensView" class="view">
+            <div class="view-header">
+                <h2>Gestión de Probetas</h2>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="addBatchBtn">
+                        <i class="fas fa-plus"></i> Nuevo Lote
+                    </button>
+                    <button class="btn btn-secondary" id="searchBtn">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button class="btn btn-secondary" id="exportCsvBtn" title="Exportar CSV">
+                        <i class="fas fa-file-csv"></i> Exportar CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-container" id="searchContainer" style="display:none;">
+                <div class="search-form">
+                    <input type="text" id="searchInput" placeholder="Buscar por orden, lote, descripción, ensayo..."/>
+                    <button type="button" id="executeSearch"><i class="fas fa-search"></i></button>
+                    <button type="button" id="clearSearch"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="specimensTable">
+                    <thead>
+                    <tr>
+                        <th>Orden</th>
+                        <th>Lote</th>
+                        <th>Fecha</th>
+                        <th>Orientación</th>
+                        <th>Descripción</th>
+                        <th>Ensayo</th>
+                        <th>Tipo/Fibra</th>
+                        <th>Fuerza Máx.</th>
+                        <th>Módulo Elast.</th>
+                        <th>Tipo Resina</th>
+                        <th>Curado/Temp/Hum</th>
+                        <th>Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="specimensTableBody"></tbody>
+                </table>
+
+                <!-- Estado vacío opcional -->
+                <div id="specimensEmpty" style="display:none; text-align:center; padding:24px;">
+                    <i class="fas fa-vials" style="font-size:32px;"></i>
+                    <h4>No hay probetas</h4>
+                    <p>Registra un lote para cargar probetas.</p>
+                    <button class="btn btn-primary" onclick="openBatchModal()">
+                        <i class="fas fa-plus"></i> Crear lote
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Specimen Edit Modal -->
+        <div id="specimenModal" class="modal">
+            <div class="modal-content small-modal">
+                <div class="modal-header">
+                    <h3 id="specimenModalTitle">Editar Probeta</h3>
+                    <button class="modal-close" id="closeSpecimenModal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <form id="specimenForm">
+                        <input type="hidden" id="specimenId"/>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="spOrden">Orden</label>
+                                <input type="number" id="spOrden" required placeholder="Número de orden"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spFecha">Fecha</label>
+                                <input type="date" id="spFecha" required placeholder="Fecha de creación"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spOrientacion">Orientación</label>
+                                <input type="text" id="spOrientacion"
+                                       placeholder="Orientación de la probeta 0°/90°/45°"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="spDescripcion">Descripción</label>
+                            <textarea id="spDescripcion" rows="2"
+                                      placeholder="Ej: Probeta de fibra de vidrio UD 0°"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="spEnsayo">Ensayo</label>
+                                <input type="text" id="spEnsayo"
+                                       placeholder="Tipo de ensayo (tracción, compresión, flexión)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spTipoFibra">Tipo Fibra</label>
+                                <input type="text" id="spTipoFibra"
+                                       placeholder="Tipo de fibra de como vidrio, carbono, aramida..."/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spTipoResina">Tipo Resina</label>
+                                <input type="text" id="spTipoResina"
+                                       placeholder="Tipo de resina como epóxica, poliéster..."/>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="spFuerzaMaxima">Fuerza Máx.</label>
+                                <input type="number" step="0.01" id="spFuerzaMaxima"
+                                       placeholder="Fuerza máxima en Newtons (N)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spModuloElasticidad">Módulo Elast.</label>
+                                <input type="number" step="0.01" id="spModuloElasticidad"
+                                       placeholder="Módulo de elasticidad en MPa"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="spCuradoTempHum">Curado/Temp/Hum</label>
+                                <input type="text" id="spCuradoTempHum"
+                                       placeholder="Condiciones de curado, temperatura y humedad 100°C/50%HR"/>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelSpecimen">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Probeta</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Batches View -->
+        <div id="batchesView" class="view">
+            <div class="view-header"><h2>Gestión de Lotes</h2></div>
+            <div class="batches-grid" id="batchesGrid"></div>
+        </div>
+    </main>
+</div>
+
+<!-- Add/Edit Batch Modal -->
+<div id="batchModal" class="modal">
+    <div class="modal-content batch-modal">
+        <div class="modal-header">
+            <h2 id="batchModalTitle">Nuevo Lote de Probetas</h2>
+            <button class="modal-close" id="closeBatchModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="batchForm">
+                <div class="batch-info">
+                    <h3>Información del Lote</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="batchName">Nombre del Lote</label>
+                            <input type="text" id="batchName" name="batchName" required/>
+                        </div>
+                        <div class="form-group">
+                            <label for="batchDate">Fecha de Creación</label>
+                            <input type="date" id="batchDate" name="batchDate" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="batchDescription">Descripción del Lote</label>
+                        <textarea id="batchDescription" name="batchDescription" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="specimens-section">
+                    <div class="specimens-header">
+                        <h3>Probetas del Lote</h3>
+                        <button type="button" class="btn btn-secondary" id="addSpecimenBtn">
+                            <i class="fas fa-plus"></i> Agregar Probeta
+                        </button>
+                    </div>
+                    <div class="specimens-table-container">
+                        <table class="specimens-form-table">
+                            <thead>
+                            <tr>
+                                <th>Orden</th>
+                                <th>Fecha</th>
+                                <th>Orientación</th>
+                                <th>Descripción</th>
+                                <th>Ensayo</th>
+                                <th>Tipo/Fibra</th>
+                                <th>Fuerza Máx.</th>
+                                <th>Módulo Elast.</th>
+                                <th>Tipo Resina</th>
+                                <th>Curado/Temp/Hum</th>
+                                <th>Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody id="specimensFormBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBatch">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Lote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content confirm-modal">
+        <div class="modal-header"><h3 id="confirmTitle">Confirmar Acción</h3></div>
+        <div class="modal-body"><p id="confirmMessage">¿Está seguro de realizar esta acción?</p></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="confirmCancel">Cancelar</button>
+            <button class="btn btn-danger" id="confirmAccept">Confirmar</button>
+        </div>
+    </div>
+</div>
+<!-- Activity History Modal -->
+<div id="activityModal" class="modal">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h3>Historial de Actividad</h3>
+            <button class="modal-close" id="closeActivityModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="activity-filters">
+                <input type="text" id="activitySearch" placeholder="Buscar por texto, usuario o ID…" />
+                <select id="activityTypeFilter">
+                    <option value="">Todos los tipos</option>
+                    <option value="login">Inicio de sesión</option>
+                    <option value="batch">Lotes</option>
+                    <option value="specimen">Probetas</option>
+                    <option value="delete">Eliminaciones</option>
+                    <option value="update">Actualizaciones</option>
+                    <option value="export">Exportaciones</option>
+                    <option value="other">Otros</option>
+                </select>
+                <button class="btn btn-secondary" id="exportActivityCsv">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </button>
+            </div>
+
+            <div id="activityTableWrap">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Evento</th>
+                        <th>Usuario</th>
+                        <th>Tipo</th>
+                        <th>Detalles</th>
+                        <th>Enlace</th>
+                    </tr>
+                    </thead>
+                    <tbody id="activityTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button class="btn" id="activityPrev">Anterior</button>
+                <span id="activityPageInfo"></span>
+                <button class="btn" id="activityNext">Siguiente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    window.__API_BASE__ = "/api";
+</script>
+<script src="script.js"></script>
+</body>
+</html>
